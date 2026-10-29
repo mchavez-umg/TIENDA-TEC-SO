@@ -1,0 +1,133 @@
+<header class="pagina-encabezado">
+  <div>
+    <h1>Facturación</h1>
+    <p>
+      Facturas emitidas en el período
+      @if (!cargando() && !fallo()) {
+        <span class="resumen">
+          · {{ facturas().length }} facturas · {{ vendido() | currency: 'GTQ' : 'symbol-narrow' }} vendidos
+        </span>
+      }
+    </p>
+  </div>
+  @if (puedeCrear()) {
+    <a mat-flat-button routerLink="nueva">
+      <mat-icon>add</mat-icon>
+      Nueva factura
+    </a>
+  }
+</header>
+
+<mat-card appearance="outlined" class="tarjeta-tabla">
+  <div class="tabla-filtros">
+    <mat-form-field>
+      <mat-label>Desde</mat-label>
+      <input
+        #desdeInput
+        matInput
+        type="date"
+        [value]="desde()"
+        [max]="hasta()"
+        (change)="cambiar('desde', desdeInput.value)"
+      />
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Hasta</mat-label>
+      <input
+        #hastaInput
+        matInput
+        type="date"
+        [value]="hasta()"
+        [min]="desde()"
+        (change)="cambiar('hasta', hastaInput.value)"
+      />
+    </mat-form-field>
+    <mat-form-field>
+      <mat-label>Sucursal</mat-label>
+      <mat-select [value]="idSucursal()" (selectionChange)="cambiarSucursal($event.value)">
+        <mat-option [value]="null">Todas</mat-option>
+        @for (sucursal of sucursales(); track sucursal.idSucursal) {
+          <mat-option [value]="sucursal.idSucursal">{{ sucursal.nombre }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div class="tabla-carga">
+    @if (cargando()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Cargando facturas" />
+    }
+  </div>
+
+  <div class="tabla-contenedor">
+    <table mat-table [dataSource]="datos" matSort matSortActive="documento" matSortDirection="desc" class="tabla">
+      <ng-container matColumnDef="documento">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-codigo">Factura</th>
+        <td mat-cell *matCellDef="let fila" class="col-codigo">{{ fila.serie }}-{{ fila.numero }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="fecha">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-fecha">Fecha</th>
+        <td mat-cell *matCellDef="let fila" class="col-fecha">{{ fila.fecha | date: 'dd/MM/yyyy HH:mm' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="sucursal">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Sucursal</th>
+        <td mat-cell *matCellDef="let fila">{{ fila.sucursal }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="cliente">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header>Cliente</th>
+        <td mat-cell *matCellDef="let fila">
+          {{ fila.cliente }}
+          <span class="dato-secundario">NIT {{ fila.nit }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="total">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-numero">Total</th>
+        <td mat-cell *matCellDef="let fila" class="col-numero">
+          {{ fila.total | currency: 'GTQ' : 'symbol-narrow' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-estado">Estado</th>
+        <td mat-cell *matCellDef="let fila" class="col-estado">
+          <span class="estado" [class.estado-inactivo]="fila.estado !== 'Emitida'">{{ fila.estado }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef class="col-acciones"><span class="oculto">Acciones</span></th>
+        <td mat-cell *matCellDef="let fila" class="col-acciones">
+          <button
+            mat-icon-button
+            matTooltip="Ver factura"
+            [attr.aria-label]="'Ver factura ' + fila.serie + '-' + fila.numero"
+            (click)="ver(fila)"
+          >
+            <mat-icon>receipt_long</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
+      <tr mat-row *matRowDef="let fila; columns: columnas"></tr>
+      <tr class="mat-mdc-row" *matNoDataRow>
+        <td class="mat-mdc-cell tabla-vacia" [attr.colspan]="columnas.length">
+          @if (cargando()) {
+            Cargando facturas…
+          } @else if (fallo()) {
+            <span>No se pudieron cargar las facturas.</span>
+            <button mat-button (click)="cargar()">Reintentar</button>
+          } @else {
+            No hay facturas en este período.
+          }
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <mat-paginator [pageSizeOptions]="[10, 25, 50]" [pageSize]="10" showFirstLastButtons />
+</mat-card>

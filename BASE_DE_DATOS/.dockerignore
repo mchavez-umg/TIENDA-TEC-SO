@@ -1,0 +1,4 @@
+PRUEBAS.sql
+*.md
+Dockerfile
+.dockerignore

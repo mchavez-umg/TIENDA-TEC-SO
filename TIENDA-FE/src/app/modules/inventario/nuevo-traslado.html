@@ -1,0 +1,125 @@
+<header class="pagina-encabezado">
+  <div>
+    <h1>Nuevo traslado</h1>
+    <p>La mercadería sale del origen al enviar y entra al destino cuando este la recibe.</p>
+  </div>
+  <a mat-button routerLink="/inventario/traslados">
+    <mat-icon>arrow_back</mat-icon>
+    Volver a traslados
+  </a>
+</header>
+
+<div class="documento">
+  <mat-card appearance="outlined" class="panel-documento">
+    <h2>Datos del traslado</h2>
+    <div class="documento-datos">
+      <mat-form-field>
+        <mat-label>Sucursal de origen</mat-label>
+        <mat-select [value]="idOrigen()" (selectionChange)="idOrigen.set($event.value)" required>
+          @for (sucursal of sucursales(); track sucursal.idSucursal) {
+            <mat-option [value]="sucursal.idSucursal">{{ sucursal.nombre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Sucursal de destino</mat-label>
+        <mat-select [value]="idDestino()" (selectionChange)="idDestino.set($event.value)" required>
+          @for (sucursal of sucursales(); track sucursal.idSucursal) {
+            <mat-option [value]="sucursal.idSucursal" [disabled]="sucursal.idSucursal === idOrigen()">
+              {{ sucursal.nombre }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field>
+        <mat-label>Observación</mat-label>
+        <input
+          #obs
+          matInput
+          maxlength="200"
+          [value]="observacion()"
+          (input)="observacion.set(obs.value)"
+        />
+      </mat-form-field>
+    </div>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="panel-documento">
+    <h2>Productos</h2>
+    <app-buscador-producto
+      [productos]="productos()"
+      [existencias]="existencias()"
+      [pista]="idOrigen() ? null : 'Seleccione primero la sucursal de origen.'"
+      (elegido)="agregar($event)"
+    />
+
+    @if (lineas().length) {
+      <div class="tabla-contenedor">
+        <table class="tabla-lineas">
+          <thead>
+            <tr>
+              <th scope="col">Producto</th>
+              <th scope="col" class="num">Disponible en origen</th>
+              <th scope="col" class="num">Cantidad a enviar</th>
+              <th scope="col"><span class="oculto">Quitar</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (linea of lineas(); track linea.idProducto; let i = $index) {
+              <tr [class.con-error]="errorLinea(linea)">
+                <td>
+                  <span class="producto">{{ linea.nombre }}</span>
+                  <small>{{ linea.codigo }}</small>
+                  @if (errorLinea(linea); as error) {
+                    <small class="error-linea" role="alert">{{ error }}</small>
+                  }
+                </td>
+                <td class="num">{{ disponible(linea.idProducto) }}</td>
+                <td class="num">
+                  <input
+                    #cantidad
+                    class="entrada-celda"
+                    type="number"
+                    min="1"
+                    step="1"
+                    [value]="linea.cantidad"
+                    [attr.aria-label]="'Cantidad de ' + linea.nombre"
+                    (input)="actualizar(i, cantidad.value)"
+                  />
+                </td>
+                <td class="quitar">
+                  <button
+                    mat-icon-button
+                    type="button"
+                    matTooltip="Quitar"
+                    [attr.aria-label]="'Quitar ' + linea.nombre"
+                    (click)="quitar(i)"
+                  >
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="lineas-vacio">Aún no hay productos en el traslado.</p>
+    }
+
+    <div class="documento-pie">
+      <p class="documento-total">
+        <span>Unidades a enviar</span>
+        <strong>{{ unidades() }}</strong>
+      </p>
+      <div class="documento-accion">
+        <button mat-flat-button type="button" [disabled]="!!motivo() || guardando()" (click)="guardar()">
+          {{ guardando() ? 'Enviando…' : 'Enviar traslado' }}
+        </button>
+        @if (motivo(); as motivo) {
+          <small>{{ motivo }}</small>
+        }
+      </div>
+    </div>
+  </mat-card>
+</div>

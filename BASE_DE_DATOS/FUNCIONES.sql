@@ -1,0 +1,120 @@
+CREATE OR REPLACE FUNCTION FN_ID_ESTADO (
+    p_entidad IN VARCHAR2,
+    p_codigo  IN VARCHAR2
+) RETURN NUMBER
+IS
+    v_id_estado ESTADO.ID_ESTADO%TYPE;
+BEGIN
+    SELECT ID_ESTADO INTO v_id_estado
+    FROM ESTADO
+    WHERE ENTIDAD = p_entidad
+      AND CODIGO = p_codigo;
+
+    RETURN v_id_estado;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20010, 'No existe el estado ' || p_codigo || ' para ' || p_entidad);
+END;
+/
+
+CREATE OR REPLACE FUNCTION FN_EXISTENCIA_DISPONIBLE (
+    p_id_sucursal IN NUMBER,
+    p_id_producto IN NUMBER
+) RETURN NUMBER
+IS
+    v_existencia INVENTARIO.EXISTENCIA%TYPE;
+BEGIN
+    SELECT EXISTENCIA INTO v_existencia
+    FROM INVENTARIO
+    WHERE ID_SUCURSAL = p_id_sucursal
+      AND ID_PRODUCTO = p_id_producto;
+
+    RETURN v_existencia;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+END;
+/
+
+CREATE OR REPLACE FUNCTION FN_GARANTIA_VIGENTE (
+    p_id_detalle_factura IN NUMBER,
+    p_fecha              IN DATE DEFAULT SYSDATE
+) RETURN VARCHAR2
+IS
+    v_inicio DETALLE_FACTURA.FECHA_INICIO_GARANTIA%TYPE;
+    v_fin    DETALLE_FACTURA.FECHA_FIN_GARANTIA%TYPE;
+BEGIN
+    SELECT FECHA_INICIO_GARANTIA, FECHA_FIN_GARANTIA INTO v_inicio, v_fin
+    FROM DETALLE_FACTURA
+    WHERE ID_DETALLE_FACTURA = p_id_detalle_factura;
+
+    IF TRUNC(p_fecha) BETWEEN TRUNC(v_inicio) AND TRUNC(v_fin) THEN
+        RETURN 'S';
+    END IF;
+
+    RETURN 'N';
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 'N';
+END;
+/
+
+CREATE OR REPLACE FUNCTION FN_CANTIDAD_PENDIENTE_NC (
+    p_id_detalle_factura IN NUMBER
+) RETURN NUMBER
+IS
+    v_facturada DETALLE_FACTURA.CANTIDAD%TYPE;
+    v_devuelta  NUMBER;
+BEGIN
+    SELECT CANTIDAD INTO v_facturada
+    FROM DETALLE_FACTURA
+    WHERE ID_DETALLE_FACTURA = p_id_detalle_factura;
+
+    SELECT NVL(SUM(CANTIDAD), 0) INTO v_devuelta
+    FROM DETALLE_NOTA_CREDITO
+    WHERE ID_DETALLE_FACTURA = p_id_detalle_factura;
+
+    RETURN v_facturada - v_devuelta;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+END;
+/
+
+CREATE OR REPLACE FUNCTION FN_MONTO_PENDIENTE_NC (
+    p_id_detalle_factura IN NUMBER
+) RETURN NUMBER
+IS
+    v_facturado DETALLE_FACTURA.SUBTOTAL%TYPE;
+    v_devuelto  NUMBER;
+BEGIN
+    SELECT SUBTOTAL INTO v_facturado
+    FROM DETALLE_FACTURA
+    WHERE ID_DETALLE_FACTURA = p_id_detalle_factura;
+
+    SELECT NVL(SUM(MONTO), 0) INTO v_devuelto
+    FROM DETALLE_NOTA_CREDITO
+    WHERE ID_DETALLE_FACTURA = p_id_detalle_factura;
+
+    RETURN v_facturado - v_devuelto;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+END;
+/
+
+CREATE OR REPLACE FUNCTION FN_TOTAL_PAGADO (
+    p_id_factura IN NUMBER
+) RETURN NUMBER
+IS
+    v_total NUMBER;
+BEGIN
+    SELECT NVL(SUM(MONTO), 0) INTO v_total
+    FROM PAGO
+    WHERE ID_FACTURA = p_id_factura;
+
+    RETURN v_total;
+END;
+/
+
+SELECT object_name, status FROM user_objects WHERE object_type = 'FUNCTION' ORDER BY object_name;

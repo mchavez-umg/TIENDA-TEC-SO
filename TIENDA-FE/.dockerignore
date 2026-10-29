@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.angular/
+.idea/
+.vscode/
+.taste-skill/
+.git/
+.gitignore
+*.md
+Dockerfile
+.dockerignore

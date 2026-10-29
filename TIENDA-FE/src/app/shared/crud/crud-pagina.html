@@ -1,0 +1,155 @@
+<header class="pagina-encabezado">
+  <div>
+    <h1>{{ config().titulo }}</h1>
+    <p>
+      {{ config().descripcion }}
+      @if (!cargando() && !fallo()) {
+        <span class="resumen">· {{ resumen() }}</span>
+      }
+    </p>
+  </div>
+  @if (puede('puedeCrear')) {
+    @if (config().nuevoRuta; as ruta) {
+      <a mat-flat-button [routerLink]="ruta">
+        <mat-icon>add</mat-icon>
+        Nuev{{ articulo() }} {{ config().singular }}
+      </a>
+    } @else {
+      <button mat-flat-button (click)="abrir()">
+        <mat-icon>add</mat-icon>
+        Nuev{{ articulo() }} {{ config().singular }}
+      </button>
+    }
+  }
+</header>
+
+<mat-card appearance="outlined" class="tarjeta-tabla">
+  <div class="tabla-filtros">
+    <mat-form-field class="buscador">
+      <mat-label>Buscar</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input #buscador matInput [value]="busqueda()" (input)="filtrar(buscador.value)" />
+      @if (busqueda()) {
+        <button matSuffix mat-icon-button aria-label="Limpiar búsqueda" (click)="filtrar('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </mat-form-field>
+  </div>
+
+  <div class="tabla-carga">
+    @if (cargando()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Cargando registros" />
+    }
+  </div>
+
+  <div class="tabla-contenedor">
+    <table mat-table [dataSource]="datos" matSort class="tabla">
+      @for (columna of config().columnas; track columna.campo) {
+        <ng-container [matColumnDef]="columna.campo">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header [class]="clase(columna)">
+            {{ columna.titulo }}
+          </th>
+          <td mat-cell *matCellDef="let fila" [class]="clase(columna)">
+            @switch (columna.tipo) {
+              @case ('estado') {
+                <span
+                  class="estado"
+                  [class.estado-inactivo]="tono(fila[columna.campo]) === 'inactivo'"
+                  [class.estado-aviso]="tono(fila[columna.campo]) === 'aviso'"
+                >
+                  {{ fila[columna.campo] }}
+                </span>
+              }
+              @case ('moneda') {
+                {{ fila[columna.campo] | currency: 'GTQ' : 'symbol-narrow' }}
+              }
+              @case ('fecha') {
+                {{ (fila[columna.campo] | date: 'dd/MM/yyyy') ?? '—' }}
+              }
+              @case ('fechaHora') {
+                {{ (fila[columna.campo] | date: 'dd/MM/yyyy HH:mm') ?? '—' }}
+              }
+              @case ('sino') {
+                {{ fila[columna.campo] === 'S' ? 'Sí' : 'No' }}
+              }
+              @default {
+                {{ fila[columna.campo] ?? '—' }}
+              }
+            }
+          </td>
+        </ng-container>
+      }
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef class="col-acciones">
+          <span class="oculto">Acciones</span>
+        </th>
+        <td mat-cell *matCellDef="let fila" class="col-acciones">
+          @if (editable() && puede('puedeEditar')) {
+            <button
+              mat-icon-button
+              matTooltip="Editar"
+              [attr.aria-label]="'Editar ' + etiqueta(fila)"
+              (click)="abrir(fila)"
+            >
+              <mat-icon>edit</mat-icon>
+            </button>
+          }
+          @for (accion of config().acciones ?? []; track accion.texto) {
+            @if (puede(accion.permiso) && (!accion.visible || accion.visible(fila))) {
+              <button
+                mat-icon-button
+                [matTooltip]="accion.texto"
+                [attr.aria-label]="accion.texto + ': ' + etiqueta(fila)"
+                (click)="accion.ejecutar(fila, recargar)"
+              >
+                <mat-icon>{{ accion.icono }}</mat-icon>
+              </button>
+            }
+          }
+          @if (desactivable() && puede('puedeEliminar') && fila.estado === 'Activo') {
+            <button
+              mat-icon-button
+              matTooltip="Desactivar"
+              [attr.aria-label]="'Desactivar ' + etiqueta(fila)"
+              (click)="desactivar(fila)"
+            >
+              <mat-icon>block</mat-icon>
+            </button>
+          }
+          @if (desactivable() && puede('puedeEliminar') && fila.estado !== 'Activo') {
+            <button
+              mat-icon-button
+              matTooltip="Activar"
+              [attr.aria-label]="'Activar ' + etiqueta(fila)"
+              (click)="activar(fila)"
+            >
+              <mat-icon>check_circle</mat-icon>
+            </button>
+          }
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas(); sticky: true"></tr>
+      <tr mat-row *matRowDef="let fila; columns: columnas()"></tr>
+      <tr class="mat-mdc-row" *matNoDataRow>
+        <td class="mat-mdc-cell tabla-vacia" [attr.colspan]="columnas().length">
+          @if (cargando()) {
+            Cargando {{ config().titulo.toLowerCase() }}…
+          } @else if (fallo()) {
+            <span>No se pudieron cargar {{ config().titulo.toLowerCase() }}.</span>
+            <button mat-button (click)="cargar()">Reintentar</button>
+          } @else if (busqueda()) {
+            <span>Sin resultados para «{{ busqueda() }}».</span>
+            <button mat-button (click)="filtrar('')">Limpiar búsqueda</button>
+          } @else {
+            Aún no hay {{ config().titulo.toLowerCase() }} registrad{{ articulo() }}s.
+          }
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <mat-paginator [pageSizeOptions]="[10, 25, 50]" [pageSize]="10" showFirstLastButtons />
+</mat-card>

@@ -1,0 +1,4 @@
+# Secretos del despliegue
+.env
+NGINX/certs/
+__pycache__/

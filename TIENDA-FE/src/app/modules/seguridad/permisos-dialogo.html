@@ -1,0 +1,55 @@
+<h2 mat-dialog-title>Permisos del rol {{ rol.nombre }}</h2>
+<mat-dialog-content>
+  <p class="ayuda">
+    Cada casilla se guarda al marcarla. Crear, Editar y Desactivar incluyen Consultar; quitar
+    Consultar retira todos los permisos de esa opción.
+  </p>
+  <div class="tabla-carga">
+    @if (cargando()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Cargando permisos" />
+    }
+  </div>
+  <table class="tabla-permisos">
+    <thead>
+      <tr>
+        <th scope="col">Opción</th>
+        @for (clave of claves; track clave) {
+          <th scope="col" class="centro">{{ titulos[clave] }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (grupo of grupos(); track grupo.raiz.idOpcion) {
+        @if (!grupo.raiz.ruta) {
+          <tr class="grupo">
+            <th scope="colgroup" [attr.colspan]="claves.length + 1">{{ grupo.raiz.nombre }}</th>
+          </tr>
+        }
+        @for (opcion of grupo.hojas; track opcion.idOpcion) {
+          <tr>
+            <th scope="row" [class.sangria]="!grupo.raiz.ruta">{{ opcion.nombre }}</th>
+            @for (clave of claves; track clave) {
+              <td class="centro">
+                <mat-checkbox
+                  [checked]="permiso(opcion.idOpcion)[clave]"
+                  [aria-label]="titulos[clave] + ' ' + opcion.nombre"
+                  (change)="cambiar(opcion, clave, $event.checked)"
+                />
+              </td>
+            }
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</mat-dialog-content>
+<mat-dialog-actions class="acciones">
+  <span class="estado-guardado" role="status">
+    @if (pendientes() > 0) {
+      Guardando…
+    } @else if (guardadoAlguna()) {
+      Cambios guardados
+    }
+  </span>
+  <button mat-flat-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>

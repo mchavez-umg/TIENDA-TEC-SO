@@ -1,0 +1,57 @@
+.ayuda {
+  max-width: 64ch;
+  margin: 0 0 8px;
+  color: var(--app-texto-sec);
+}
+
+.tabla-permisos {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--app-regla);
+    text-align: left;
+  }
+
+  th {
+    font-weight: 400;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 10px 8px;
+    background: var(--app-superficie);
+    border-bottom-color: var(--app-borde);
+    color: var(--app-texto-sec);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .centro {
+    width: 96px;
+    text-align: center;
+  }
+
+  .grupo th {
+    padding-top: 14px;
+    color: var(--app-texto);
+    font-weight: 600;
+  }
+
+  .sangria {
+    padding-left: 24px;
+  }
+}
+
+.acciones {
+  justify-content: space-between;
+}
+
+.estado-guardado {
+  color: var(--app-texto-sec);
+  font-size: 13px;
+}

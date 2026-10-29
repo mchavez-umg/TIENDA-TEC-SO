@@ -1,0 +1,102 @@
+<h2 mat-dialog-title>
+  @if (detalle(); as d) {
+    Factura {{ d.factura.serie }}-{{ d.factura.numero }}
+  } @else {
+    Factura
+  }
+</h2>
+<mat-dialog-content>
+  @if (datos.recienEmitida) {
+    <p class="emitida" role="status">La factura se emitió correctamente.</p>
+  }
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  } @else if (detalle(); as d) {
+    <dl class="cabecera">
+      <div>
+        <dt>Fecha</dt>
+        <dd>{{ d.factura.fecha | date: 'dd/MM/yyyy HH:mm' }}</dd>
+      </div>
+      <div>
+        <dt>Sucursal</dt>
+        <dd>{{ d.factura.sucursal }}</dd>
+      </div>
+      <div>
+        <dt>Cliente</dt>
+        <dd>{{ d.factura.cliente }} · NIT {{ d.factura.nit }}</dd>
+      </div>
+      <div>
+        <dt>Atendió</dt>
+        <dd>{{ d.factura.empleado }}</dd>
+      </div>
+    </dl>
+
+    <table class="detalle">
+      <thead>
+        <tr>
+          <th scope="col">Producto</th>
+          <th scope="col" class="num">Cant.</th>
+          <th scope="col" class="num">Precio</th>
+          <th scope="col" class="num">Descuento</th>
+          <th scope="col" class="num">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (linea of d.lineas; track linea.idDetalleFactura) {
+          <tr>
+            <td>
+              <span class="producto">{{ linea.producto }}</span>
+              <small>{{ linea.codigo }} · Garantía hasta {{ linea.finGarantia | date: 'dd/MM/yyyy' }}</small>
+            </td>
+            <td class="num">{{ linea.cantidad }}</td>
+            <td class="num">{{ linea.precioUnitario | currency: 'GTQ' : 'symbol-narrow' }}</td>
+            <td class="num">
+              {{ linea.descuento > 0 ? (linea.descuento | currency: 'GTQ' : 'symbol-narrow') : '—' }}
+            </td>
+            <td class="num">{{ linea.subtotal | currency: 'GTQ' : 'symbol-narrow' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <div class="pie">
+      <div class="pagos">
+        <h3>Pagos</h3>
+        @for (pago of d.pagos; track pago.idPago) {
+          <p>
+            <span>
+              {{ pago.formaPago }}
+              @if (pago.banco) {
+                · {{ pago.banco }}
+              }
+              @if (pago.noReferencia || pago.noAutorizacion) {
+                <small>Ref. {{ pago.noReferencia || pago.noAutorizacion }}</small>
+              }
+            </span>
+            <strong>{{ pago.monto | currency: 'GTQ' : 'symbol-narrow' }}</strong>
+          </p>
+        }
+      </div>
+      <dl class="totales">
+        <div>
+          <dt>Subtotal sin IVA</dt>
+          <dd>{{ d.factura.subtotal | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+        <div>
+          <dt>IVA (12 %)</dt>
+          <dd>{{ d.factura.iva | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+        <div class="total">
+          <dt>Total</dt>
+          <dd>{{ d.factura.total | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+      </dl>
+    </div>
+  } @else {
+    <mat-progress-bar mode="indeterminate" aria-label="Cargando factura" />
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-flat-button mat-dialog-close>Cerrar</button>
+</mat-dialog-actions>

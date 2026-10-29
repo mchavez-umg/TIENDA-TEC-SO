@@ -1,0 +1,95 @@
+<a class="saltar-contenido" href="#contenido">Saltar al contenido</a>
+
+<mat-sidenav-container class="shell">
+  <mat-sidenav
+    class="sidenav"
+    [mode]="movil() ? 'over' : 'side'"
+    [opened]="!movil() || menuAbierto()"
+    [disableClose]="!movil()"
+    (closedStart)="menuAbierto.set(false)"
+  >
+    <div class="marca-app">
+      <span>Tienda Tec</span>
+    </div>
+
+    <nav class="nav" aria-label="Menú principal">
+      <a
+        class="nav-item"
+        routerLink="/"
+        routerLinkActive="activo"
+        ariaCurrentWhenActive="page"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <mat-icon>home</mat-icon>
+        <span>Inicio</span>
+      </a>
+
+      @for (nodo of menu.arbol(); track nodo.idOpcion) {
+        @if (nodo.hijos.length) {
+          <button
+            type="button"
+            class="nav-item"
+            [class.contiene-activo]="contieneActual(nodo)"
+            [attr.aria-expanded]="expandido(nodo)"
+            (click)="alternar(nodo)"
+          >
+            <mat-icon>{{ nodo.icono }}</mat-icon>
+            <span>{{ nodo.nombre }}</span>
+            <mat-icon class="flecha">{{ expandido(nodo) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+          @if (expandido(nodo)) {
+            @for (hijo of nodo.hijos; track hijo.idOpcion) {
+              <a
+                class="nav-item nav-hijo"
+                [routerLink]="hijo.ruta"
+                routerLinkActive="activo"
+                ariaCurrentWhenActive="page"
+              >
+                {{ hijo.nombre }}
+              </a>
+            }
+          }
+        } @else if (nodo.ruta) {
+          <a class="nav-item" [routerLink]="nodo.ruta" routerLinkActive="activo" ariaCurrentWhenActive="page">
+            <mat-icon>{{ nodo.icono }}</mat-icon>
+            <span>{{ nodo.nombre }}</span>
+          </a>
+        }
+      }
+    </nav>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="contenido">
+    <mat-toolbar class="barra">
+      @if (movil()) {
+        <button mat-icon-button aria-label="Abrir menú" (click)="menuAbierto.set(true)">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <nav class="migas" aria-label="Ubicación">
+        <a routerLink="/">Inicio</a>
+        @for (miga of migas(); track $index; let ultima = $last) {
+          <mat-icon>chevron_right</mat-icon>
+          <span [attr.aria-current]="ultima ? 'page' : null">{{ miga }}</span>
+        }
+      </nav>
+
+      <span class="espacio"></span>
+
+      <div class="usuario">
+        <span class="usuario-inicial" aria-hidden="true">{{ auth.sesion()?.username?.charAt(0) }}</span>
+        <div class="usuario-datos">
+          <strong>{{ auth.sesion()?.username }}</strong>
+          <small>{{ auth.sesion()?.rol }}</small>
+        </div>
+      </div>
+      <button mat-icon-button matTooltip="Cerrar sesión" aria-label="Cerrar sesión" (click)="auth.logout()">
+        <mat-icon>logout</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <main id="contenido" class="pagina" tabindex="-1">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

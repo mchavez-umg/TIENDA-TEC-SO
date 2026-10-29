@@ -1,0 +1,198 @@
+<header class="pagina-encabezado">
+  <div>
+    <h1>{{ config().titulo }}</h1>
+    <p>
+      {{ config().descripcion }}
+      @if (!cargando() && !fallo()) {
+        <span class="resumen">· {{ resumen() }}</span>
+      }
+    </p>
+  </div>
+  <button mat-stroked-button type="button" [disabled]="!filas().length" (click)="exportar()">
+    <mat-icon>download</mat-icon>
+    Exportar CSV
+  </button>
+</header>
+
+<mat-card appearance="outlined" class="tarjeta-tabla">
+  <div class="tabla-filtros">
+    @for (filtro of config().filtros; track filtro.nombre) {
+      @switch (filtro.tipo) {
+        @case ('casilla') {
+          <mat-checkbox
+            class="filtro-casilla"
+            [checked]="!!valores()[filtro.nombre]"
+            (change)="cambiar(filtro.nombre, $event.checked)"
+          >
+            {{ filtro.etiqueta }}
+          </mat-checkbox>
+        }
+        @case ('sucursal') {
+          <mat-form-field>
+            <mat-label>{{ filtro.etiqueta }}</mat-label>
+            <mat-select [value]="valores()[filtro.nombre]" (selectionChange)="cambiar(filtro.nombre, $event.value)">
+              <mat-option [value]="null">Todas</mat-option>
+              @for (s of sucursales(); track s.idSucursal) {
+                <mat-option [value]="s.idSucursal">{{ s.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        @case ('producto') {
+          <mat-form-field>
+            <mat-label>{{ filtro.etiqueta }}</mat-label>
+            <mat-select [value]="valores()[filtro.nombre]" (selectionChange)="cambiar(filtro.nombre, $event.value)">
+              <mat-option [value]="null">Todos</mat-option>
+              @for (p of productos(); track p.idProducto) {
+                <mat-option [value]="p.idProducto">{{ p.codigo }} · {{ p.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        @case ('opciones') {
+          <mat-form-field>
+            <mat-label>{{ filtro.etiqueta }}</mat-label>
+            <mat-select [value]="valores()[filtro.nombre]" (selectionChange)="cambiar(filtro.nombre, $event.value)">
+              <mat-option [value]="null">Todas</mat-option>
+              @for (o of filtro.opciones ?? []; track o.valor) {
+                <mat-option [value]="o.valor">{{ o.texto }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        @case ('texto') {
+          <mat-form-field>
+            <mat-label>{{ filtro.etiqueta }}</mat-label>
+            <input
+              #texto
+              matInput
+              [value]="valores()[filtro.nombre] ?? ''"
+              (change)="cambiar(filtro.nombre, texto.value)"
+            />
+          </mat-form-field>
+        }
+        @default {
+          <mat-form-field>
+            <mat-label>{{ filtro.etiqueta }}</mat-label>
+            <input
+              #fecha
+              matInput
+              type="date"
+              [value]="valores()[filtro.nombre] ?? ''"
+              (change)="cambiar(filtro.nombre, fecha.value)"
+            />
+          </mat-form-field>
+        }
+      }
+    }
+    <mat-form-field class="buscador">
+      <mat-label>Buscar en resultados</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input #buscador matInput [value]="busqueda()" (input)="filtrar(buscador.value)" />
+    </mat-form-field>
+  </div>
+
+  <div class="tabla-carga">
+    @if (cargando()) {
+      <mat-progress-bar mode="indeterminate" aria-label="Cargando resultados" />
+    }
+  </div>
+
+  <div class="tabla-contenedor">
+    <table mat-table [dataSource]="datos" matSort class="tabla">
+      @for (columna of config().columnas; track columna.campo) {
+        <ng-container [matColumnDef]="columna.campo">
+          <th
+            mat-header-cell
+            *matHeaderCellDef
+            mat-sort-header
+            [class.col-numero]="esNumero(columna)"
+            [class.col-fecha]="columna.tipo === 'fecha' || columna.tipo === 'fechaHora'"
+          >
+            {{ columna.titulo }}
+          </th>
+          <td
+            mat-cell
+            *matCellDef="let fila"
+            [class.col-numero]="esNumero(columna)"
+            [class.col-fecha]="columna.tipo === 'fecha' || columna.tipo === 'fechaHora'"
+          >
+            @switch (columna.tipo) {
+              @case ('moneda') {
+                {{ fila[columna.campo] | currency: 'GTQ' : 'symbol-narrow' }}
+              }
+              @case ('numero') {
+                {{ fila[columna.campo] | number }}
+              }
+              @case ('fecha') {
+                {{ (fila[columna.campo] | date: 'dd/MM/yyyy') ?? '—' }}
+              }
+              @case ('fechaHora') {
+                {{ (fila[columna.campo] | date: 'dd/MM/yyyy HH:mm') ?? '—' }}
+              }
+              @case ('sino') {
+                @if (fila[columna.campo] === 'S') {
+                  <span class="estado estado-aviso">Sí</span>
+                } @else {
+                  No
+                }
+              }
+              @default {
+                {{ fila[columna.campo] ?? '—' }}
+              }
+            }
+            @if (columna.barra) {
+              <span class="celda-barra" aria-hidden="true">
+                <span [style.width.%]="barra(columna, fila)"></span>
+              </span>
+            }
+          </td>
+          <td mat-footer-cell *matFooterCellDef [class.col-numero]="esNumero(columna)">
+            @if (columna.total) {
+              @if (columna.tipo === 'moneda') {
+                {{ total(columna) | currency: 'GTQ' : 'symbol-narrow' }}
+              } @else {
+                {{ total(columna) | number }}
+              }
+            } @else if ($first) {
+              Total
+            }
+          </td>
+        </ng-container>
+      }
+
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef class="col-acciones"><span class="oculto">Acciones</span></th>
+        <td mat-cell *matCellDef="let fila" class="col-acciones">
+          <button mat-icon-button matTooltip="Ver detalle" aria-label="Ver detalle" (click)="ver(fila)">
+            <mat-icon>visibility</mat-icon>
+          </button>
+        </td>
+        <td mat-footer-cell *matFooterCellDef></td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columnas(); sticky: true"></tr>
+      <tr mat-row *matRowDef="let fila; columns: columnas()"></tr>
+      @if (conTotales()) {
+        <tr mat-footer-row *matFooterRowDef="columnas()" class="fila-total"></tr>
+      }
+      <tr class="mat-mdc-row" *matNoDataRow>
+        <td class="mat-mdc-cell tabla-vacia" [attr.colspan]="columnas().length">
+          @if (cargando()) {
+            Cargando…
+          } @else if (fallo()) {
+            <span>No se pudo cargar la consulta.</span>
+            <button mat-button (click)="cargar()">Reintentar</button>
+          } @else if (busqueda()) {
+            <span>Sin resultados para «{{ busqueda() }}».</span>
+            <button mat-button (click)="filtrar('')">Limpiar búsqueda</button>
+          } @else {
+            No hay datos para los filtros seleccionados.
+          }
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons />
+</mat-card>

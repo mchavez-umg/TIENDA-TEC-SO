@@ -1,0 +1,130 @@
+<header class="pagina-encabezado">
+  <div>
+    <h1>Nueva nota de crédito</h1>
+    <p>Devuelve total o parcialmente los productos de una factura emitida.</p>
+  </div>
+  <a mat-button routerLink="/ventas/notas-credito">
+    <mat-icon>arrow_back</mat-icon>
+    Volver a notas de crédito
+  </a>
+</header>
+
+<div class="documento">
+  <mat-card appearance="outlined" class="panel-documento">
+    <h2>Factura</h2>
+    <app-selector-factura (elegida)="elegir($event)" />
+    @if (factura(); as f) {
+      <dl class="resumen-factura">
+        <div>
+          <dt>Cliente</dt>
+          <dd>{{ f.factura.cliente }} · NIT {{ f.factura.nit }}</dd>
+        </div>
+        <div>
+          <dt>Fecha</dt>
+          <dd>{{ f.factura.fecha | date: 'dd/MM/yyyy' }}</dd>
+        </div>
+        <div>
+          <dt>Sucursal</dt>
+          <dd>{{ f.factura.sucursal }}</dd>
+        </div>
+        <div>
+          <dt>Total facturado</dt>
+          <dd>{{ f.factura.total | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+      </dl>
+    }
+  </mat-card>
+
+  @if (factura()) {
+    <mat-card appearance="outlined" class="panel-documento">
+      <h2>Productos a devolver</h2>
+      @if (sinPendientes()) {
+        <p class="lineas-vacio">Todos los productos de esta factura ya fueron devueltos.</p>
+      } @else {
+        <div class="tabla-contenedor">
+          <table class="tabla-lineas">
+            <thead>
+              <tr>
+                <th scope="col">Producto</th>
+                <th scope="col" class="num">Vendidos</th>
+                <th scope="col" class="num">Por devolver</th>
+                <th scope="col" class="num">Devolver</th>
+                <th scope="col">Reingresa a inventario</th>
+                <th scope="col" class="num">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (d of devoluciones(); track d.linea.idDetalleFactura; let i = $index) {
+                <tr [class.con-error]="error(d)">
+                  <td>
+                    <span class="producto">{{ d.linea.producto }}</span>
+                    <small>{{ d.linea.codigo }}</small>
+                    @if (error(d); as e) {
+                      <small class="error-linea" role="alert">{{ e }}</small>
+                    }
+                  </td>
+                  <td class="num">{{ d.linea.cantidad }}</td>
+                  <td class="num">{{ d.linea.pendienteNc }}</td>
+                  <td class="num">
+                    <input
+                      #cantidad
+                      class="entrada-celda"
+                      type="number"
+                      min="0"
+                      step="1"
+                      [max]="d.linea.pendienteNc"
+                      [disabled]="d.linea.pendienteNc === 0"
+                      [value]="d.cantidad"
+                      [attr.aria-label]="'Unidades a devolver de ' + d.linea.producto"
+                      (input)="actualizar(i, { cantidad: cantidad.value === '' ? 0 : +cantidad.value })"
+                    />
+                  </td>
+                  <td>
+                    <mat-checkbox
+                      [checked]="d.reingresa"
+                      [disabled]="d.linea.pendienteNc === 0"
+                      (change)="actualizar(i, { reingresa: $event.checked })"
+                    >
+                      {{ d.reingresa ? 'Sí' : 'No, producto dañado' }}
+                    </mat-checkbox>
+                  </td>
+                  <td class="num subtotal">
+                    {{ montoEstimado(d.linea, d.cantidad) | currency: 'GTQ' : 'symbol-narrow' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <mat-form-field class="campo-completo motivo-nota">
+          <mat-label>Motivo de la devolución</mat-label>
+          <textarea
+            #motivoInput
+            matInput
+            rows="2"
+            maxlength="200"
+            required
+            [value]="motivoTexto()"
+            (input)="motivoTexto.set(motivoInput.value)"
+          ></textarea>
+        </mat-form-field>
+      }
+
+      <div class="documento-pie">
+        <p class="documento-total">
+          <span>Total a acreditar</span>
+          <strong>{{ total() | currency: 'GTQ' : 'symbol-narrow' }}</strong>
+        </p>
+        <div class="documento-accion">
+          <button mat-flat-button type="button" [disabled]="!!motivo() || guardando()" (click)="guardar()">
+            {{ guardando() ? 'Emitiendo…' : 'Emitir nota de crédito' }}
+          </button>
+          @if (motivo(); as m) {
+            <small>{{ m }}</small>
+          }
+        </div>
+      </div>
+    </mat-card>
+  }
+</div>

@@ -1,0 +1,82 @@
+@use '@angular/material' as mat;
+
+:root {
+  --app-navy: #1f2a44;
+  --app-navy-hover: #2a3757;
+  --app-navy-activo: #33415f;
+  --app-navy-borde: #2f3b58;
+  --app-navy-texto: #c3cbdb;
+  --app-acento: #4f8ef7;
+  --app-tinte-50: #eef1f7;
+  --app-tinte-100: #dfe4ee;
+  --app-tinte-200: #c5cddd;
+  --app-fondo: #f4f6f9;
+  --app-superficie: #ffffff;
+  --app-borde: #e3e7ee;
+  --app-regla: #eef1f5;
+  --app-texto: #151b28;
+  --app-texto-sec: #5b6475;
+  --app-exito: #1e6b45;
+  --app-exito-fondo: #e3f2e9;
+  --app-inactivo: #5b6475;
+  --app-inactivo-fondo: #eceff3;
+  --app-error: #a4262c;
+  --app-error-fondo: #fdecec;
+  --app-fuente: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+}
+
+html {
+  color-scheme: light;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        theme-type: light,
+      ),
+      typography: (
+        plain-family: var(--app-fuente),
+        brand-family: var(--app-fuente),
+      ),
+      density: -2,
+    )
+  );
+
+  @include mat.theme-overrides(
+    (
+      primary: #1f2a44,
+      on-primary: #ffffff,
+      primary-container: #dfe4ee,
+      on-primary-container: #1f2a44,
+      surface-tint: transparent,
+    )
+  );
+
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 6px,
+      outlined-container-shape: 6px,
+      text-container-shape: 6px,
+      protected-container-shape: 6px,
+    )
+  );
+
+  @include mat.card-overrides(
+    (
+      outlined-container-shape: 8px,
+      outlined-outline-color: var(--app-borde),
+    )
+  );
+
+  @include mat.dialog-overrides(
+    (
+      container-shape: 8px,
+    )
+  );
+
+  @include mat.sidenav-overrides(
+    (
+      container-shape: 0,
+    )
+  );
+}

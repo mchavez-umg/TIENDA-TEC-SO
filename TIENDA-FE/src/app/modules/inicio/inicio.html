@@ -1,0 +1,118 @@
+@if (permitido()) {
+  <header class="pagina-encabezado">
+    <div>
+      <h1>Resumen de {{ mes }}</h1>
+      <p>
+        @if (datos()) {
+          {{ hallazgo() }}
+        } @else {
+          Ventas de la cadena en el mes en curso.
+        }
+      </p>
+    </div>
+  </header>
+
+  @if (fallo()) {
+    <mat-card appearance="outlined" class="aviso-error">
+      <span>No se pudo cargar el resumen del mes.</span>
+      <button mat-button (click)="cargar()">Reintentar</button>
+    </mat-card>
+  } @else {
+    <mat-card appearance="outlined" class="indicadores" [class.cargando]="cargando() && !datos()">
+      <div class="indicador principal">
+        <span class="etiqueta">Vendido este mes</span>
+        <strong class="valor">{{ (datos()?.totalVendidoMes | currency: 'GTQ' : 'symbol-narrow') ?? '—' }}</strong>
+      </div>
+      <div class="indicador">
+        <span class="etiqueta">Facturas emitidas</span>
+        <strong class="valor">{{ (datos()?.facturasMes | number) ?? '—' }}</strong>
+      </div>
+      <div class="indicador">
+        <span class="etiqueta">Ticket promedio</span>
+        <strong class="valor">{{ (ticketPromedio() | currency: 'GTQ' : 'symbol-narrow') ?? '—' }}</strong>
+      </div>
+    </mat-card>
+
+    <div class="cuadricula">
+      <mat-card appearance="outlined" class="bloque">
+        <header class="bloque-encabezado">
+          <h2>Ventas por sucursal</h2>
+          <span class="bloque-nota">{{ mes }}</span>
+        </header>
+        @if (cargando() && !datos()) {
+          <mat-progress-bar mode="indeterminate" aria-label="Cargando ventas por sucursal" />
+        }
+        <ol class="ranking">
+          @for (sucursal of sucursales(); track sucursal.idSucursal; let primera = $first) {
+            <li class="ranking-fila">
+              <div class="ranking-linea">
+                <span class="ranking-nombre">{{ sucursal.sucursal }}</span>
+                <span class="ranking-total">{{ sucursal.totalVendido | currency: 'GTQ' : 'symbol-narrow' }}</span>
+              </div>
+              <div class="ranking-barra" aria-hidden="true">
+                <span [class.lider]="primera" [style.width.%]="sucursal.barra"></span>
+              </div>
+              <div class="ranking-detalle">
+                <span>
+                  {{ sucursal.numeroFacturas | number }} {{ sucursal.numeroFacturas === 1 ? 'factura' : 'facturas' }}
+                </span>
+                <span>{{ sucursal.participacion | number: '1.1-1' }} % del total</span>
+              </div>
+            </li>
+          } @empty {
+            @if (!cargando()) {
+              <li class="ranking-vacio">Ninguna sucursal ha registrado ventas en {{ mes }}.</li>
+            }
+          }
+        </ol>
+      </mat-card>
+
+      <mat-card appearance="outlined" class="bloque">
+        <header class="bloque-encabezado">
+          <h2>Requiere atención</h2>
+        </header>
+        <ul class="atencion">
+          <li>
+            <a routerLink="/inventario/existencias">
+              <span>Productos bajo el stock mínimo</span>
+              <strong [class.alerta]="(datos()?.productosBajoMinimo ?? 0) > 0">
+                {{ datos()?.productosBajoMinimo ?? '—' }}
+              </strong>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/garantias">
+              <span>Garantías abiertas</span>
+              <strong>{{ datos()?.garantiasAbiertas ?? '—' }}</strong>
+            </a>
+          </li>
+        </ul>
+      </mat-card>
+    </div>
+  }
+} @else {
+  <header class="pagina-encabezado">
+    <div>
+      <h1>Inicio</h1>
+      <p>Bienvenido, {{ auth.sesion()?.username }}. Estas son sus áreas de trabajo.</p>
+    </div>
+  </header>
+
+  <div class="areas">
+    @for (nodo of menu.arbol(); track nodo.idOpcion) {
+      <section class="area">
+        <h2>
+          <mat-icon aria-hidden="true">{{ nodo.icono }}</mat-icon>
+          {{ nodo.nombre }}
+        </h2>
+        <ul>
+          @for (hijo of nodo.hijos.length ? nodo.hijos : [nodo]; track hijo.idOpcion) {
+            @if (hijo.ruta) {
+              <li><a [routerLink]="hijo.ruta">{{ hijo.nombre }}</a></li>
+            }
+          }
+        </ul>
+      </section>
+    }
+  </div>
+}

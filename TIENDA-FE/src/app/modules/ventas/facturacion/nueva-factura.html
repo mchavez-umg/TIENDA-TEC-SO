@@ -1,0 +1,267 @@
+<header class="pagina-encabezado">
+  <div>
+    <h1>Nueva factura</h1>
+    <p>Los precios incluyen IVA. La existencia corresponde a la sucursal seleccionada.</p>
+  </div>
+  <a mat-button routerLink="/ventas/facturas">
+    <mat-icon>arrow_back</mat-icon>
+    Volver a facturas
+  </a>
+</header>
+
+<div class="pos">
+  <div class="pos-principal">
+    <mat-card appearance="outlined" class="panel-documento">
+      <h2>Datos de la factura</h2>
+      <div class="datos">
+        <mat-form-field>
+          <mat-label>Sucursal</mat-label>
+          <mat-select [value]="idSucursal()" (selectionChange)="elegirSucursal($event.value)" required>
+            @for (sucursal of sucursales(); track sucursal.idSucursal) {
+              <mat-option [value]="sucursal.idSucursal">{{ sucursal.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <div class="cliente">
+          <mat-form-field class="campo-completo">
+            <mat-label>Cliente (NIT o nombre)</mat-label>
+            <mat-icon matPrefix>person_search</mat-icon>
+            <input
+              #clienteInput
+              matInput
+              required
+              [matAutocomplete]="autoCliente"
+              [value]="textoCliente(cliente())"
+              (input)="busquedaCliente.set(clienteInput.value); cliente.set(null)"
+            />
+            <mat-autocomplete
+              #autoCliente="matAutocomplete"
+              [displayWith]="textoCliente"
+              (optionSelected)="cliente.set($event.option.value); busquedaCliente.set('')"
+            >
+              @for (c of clientesFiltrados(); track c.idCliente) {
+                <mat-option [value]="c">{{ textoCliente(c) }}</mat-option>
+              } @empty {
+                <mat-option disabled>Ningún cliente coincide</mat-option>
+              }
+            </mat-autocomplete>
+          </mat-form-field>
+          <button mat-stroked-button type="button" (click)="nuevoCliente()">
+            <mat-icon>person_add</mat-icon>
+            Nuevo cliente
+          </button>
+        </div>
+      </div>
+    </mat-card>
+
+    <mat-card appearance="outlined" class="panel-documento">
+      <h2>Productos</h2>
+      <app-buscador-producto
+        [productos]="productos()"
+        [existencias]="existencias()"
+        [pista]="idSucursal() ? null : 'Seleccione primero la sucursal.'"
+        (elegido)="agregar($event)"
+      />
+
+      @if (lineas().length) {
+        <div class="tabla-contenedor">
+          <table class="tabla-lineas">
+            <thead>
+              <tr>
+                <th scope="col">Producto</th>
+                <th scope="col" class="num">Precio</th>
+                <th scope="col" class="num">Cantidad</th>
+                <th scope="col" class="num">Descuento (Q)</th>
+                <th scope="col" class="num">Subtotal</th>
+                <th scope="col"><span class="oculto">Quitar</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (linea of lineas(); track linea.idProducto; let i = $index) {
+                <tr [class.con-error]="errorLinea(linea)">
+                  <td>
+                    <span class="producto">{{ linea.nombre }}</span>
+                    <small>{{ linea.codigo }} · {{ linea.existencia }} disponibles</small>
+                    @if (errorLinea(linea); as error) {
+                      <small class="error-linea" role="alert">{{ error }}</small>
+                    }
+                  </td>
+                  <td class="num">{{ linea.precio | currency: 'GTQ' : 'symbol-narrow' }}</td>
+                  <td class="num">
+                    <input
+                      #cantidad
+                      class="entrada-celda"
+                      type="number"
+                      min="1"
+                      step="1"
+                      [value]="linea.cantidad"
+                      [attr.aria-label]="'Cantidad de ' + linea.nombre"
+                      (input)="actualizar(i, 'cantidad', cantidad.value)"
+                    />
+                  </td>
+                  <td class="num">
+                    <input
+                      #descuento
+                      class="entrada-celda"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      [value]="linea.descuento"
+                      [attr.aria-label]="'Descuento de ' + linea.nombre"
+                      (input)="actualizar(i, 'descuento', descuento.value)"
+                    />
+                  </td>
+                  <td class="num subtotal">{{ subtotalLinea(linea) | currency: 'GTQ' : 'symbol-narrow' }}</td>
+                  <td class="quitar">
+                    <button
+                      mat-icon-button
+                      type="button"
+                      matTooltip="Quitar"
+                      [attr.aria-label]="'Quitar ' + linea.nombre"
+                      (click)="quitar(i)"
+                    >
+                      <mat-icon>delete_outline</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="lineas-vacio">Aún no hay productos en la factura.</p>
+      }
+    </mat-card>
+  </div>
+
+  <aside class="pos-resumen">
+    <mat-card appearance="outlined" class="panel-documento">
+      <h2>Resumen</h2>
+      <dl class="totales">
+        <div>
+          <dt>Subtotal sin IVA</dt>
+          <dd>{{ resumen().base | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+        <div>
+          <dt>IVA (12 %)</dt>
+          <dd>{{ resumen().iva | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+        <div class="total">
+          <dt>Total</dt>
+          <dd>{{ resumen().total | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+      </dl>
+
+      <h3>Pagos</h3>
+      @for (pago of pagos(); track $index; let i = $index) {
+        <div class="pago">
+          <span>
+            {{ pago.formaPago }}
+            @if (pago.banco) {
+              <small>{{ pago.banco }} · Ref. {{ pago.noReferencia || pago.noAutorizacion }}</small>
+            }
+          </span>
+          <strong>{{ pago.monto | currency: 'GTQ' : 'symbol-narrow' }}</strong>
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="'Quitar pago ' + pago.formaPago"
+            (click)="quitarPago(i)"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      }
+
+      <div class="nuevo-pago">
+        <mat-form-field class="campo-completo">
+          <mat-label>Forma de pago</mat-label>
+          <mat-select [value]="idFormaPago()" (selectionChange)="elegirForma($event.value)">
+            @for (forma of formas(); track forma.idFormaPago) {
+              <mat-option [value]="forma.idFormaPago">{{ forma.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field class="campo-completo">
+          <mat-label>Monto (Q)</mat-label>
+          <input
+            #montoInput
+            matInput
+            type="number"
+            min="0"
+            step="0.01"
+            [value]="monto() ?? ''"
+            (input)="monto.set(montoInput.value === '' ? null : +montoInput.value)"
+          />
+        </mat-form-field>
+        @if (requiereReferencia()) {
+          <mat-form-field class="campo-completo">
+            <mat-label>Banco</mat-label>
+            <mat-select [value]="idBanco()" (selectionChange)="idBanco.set($event.value)">
+              @for (banco of bancos(); track banco.idBanco) {
+                <mat-option [value]="banco.idBanco">{{ banco.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>No. referencia</mat-label>
+            <input
+              #refInput
+              matInput
+              maxlength="40"
+              [value]="referencia()"
+              (input)="referencia.set(refInput.value)"
+            />
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>No. autorización</mat-label>
+            <input
+              #autInput
+              matInput
+              maxlength="40"
+              [value]="autorizacion()"
+              (input)="autorizacion.set(autInput.value)"
+            />
+          </mat-form-field>
+        }
+        @if (errorPago()) {
+          <p class="error-pago campo-completo" role="alert">{{ errorPago() }}</p>
+        }
+        <button
+          mat-stroked-button
+          type="button"
+          class="campo-completo"
+          [disabled]="porPagar() <= 0"
+          (click)="agregarPago()"
+        >
+          Agregar pago
+        </button>
+      </div>
+
+      <dl class="saldo">
+        <div>
+          <dt>Pagado</dt>
+          <dd>{{ pagado() | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+        <div [class.pendiente]="porPagar() !== 0">
+          <dt>{{ porPagar() < 0 ? 'Excedente' : 'Pendiente' }}</dt>
+          <dd>{{ (porPagar() < 0 ? -porPagar() : porPagar()) | currency: 'GTQ' : 'symbol-narrow' }}</dd>
+        </div>
+      </dl>
+
+      <button
+        mat-flat-button
+        type="button"
+        class="emitir"
+        [disabled]="!!motivo() || emitiendo()"
+        (click)="emitir()"
+      >
+        {{ emitiendo() ? 'Emitiendo…' : 'Emitir factura' }}
+      </button>
+      @if (motivo(); as motivo) {
+        <p class="motivo">{{ motivo }}</p>
+      }
+    </mat-card>
+  </aside>
+</div>
